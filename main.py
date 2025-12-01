@@ -9,14 +9,22 @@ class MainWindow(CTk):
         self.geometry("500x500")
         self.menu_frame = CTkFrame(self, width = 30, height = 300)
         self.menu_frame.place(x = 0, y = 0, relwidth = 0, relheight = 1)
+        self.logitalk_label = CTkLabel(self.menu_frame, text = "Вхід в LogiTalk", font = ("Arial", 24, "bold"))
+        self.logitalk_label.place(relx = 0.2, rely = 0.3)
         self.name_entry = CTkEntry(self.menu_frame, placeholder_text = "Введіть ім'я")
         self.name_entry.place(relx = 0.25, rely = 0.5)
-        self.button_save_name = CTkButton(self.menu_frame, text = "Зберегти ім'я", command = self.save_new_name)
-        self.button_save_name.place(relx = 0.25, rely = 0.6)
+        self.host_entry = CTkEntry(self.menu_frame, placeholder_text = "Введіть ХОСТ серверу")
+        self.host_entry.place(relx = 0.25, rely = 0.6)
+        self.port_entry = CTkEntry(self.menu_frame, placeholder_text = "Введіть ПОРТ серверу")
+        self.port_entry.place(relx = 0.25, rely = 0.7)
+        self.button_register = CTkButton(self.menu_frame, text = "Зареєструватися", command = self.register)
+        self.button_register.place(relx = 0.25, rely = 0.8)
         self.button = CTkButton(self, text = "▶", width = 30, command = self.toggle_menu)
         self.button.place(x = 0, y = 0)
         self.is_menu_show = False
         self.username = "phantom"
+        self.host = "" 
+        self.port = 0
 
         self.message_frame = CTkFrame(self)
         self.message_frame.place(relx = 0.01, rely = 0.89, relwidth = 0.98, relheight = 0.1)
@@ -30,15 +38,6 @@ class MainWindow(CTk):
 
 
       
-        try:
-            self.sock = socket(AF_INET, SOCK_STREAM)
-            self.sock.connect(("5.tcp.eu.ngrok.io",19761))
-            hello = f"TEXT@{self.username}@[SYSTEM] {self.username} приєднався(лась) до чату!\n"
-            self.sock.send(hello.encode("utf-8"))
-            threading.Thread(target=self.recv_message, daemon=True).start()
-        except Exception as e:
-            self.show_new_message(f"Не вдалося підключитися до сервера: {e}")
-
     
     def toggle_menu(self):
         if self.is_menu_show :
@@ -99,11 +98,28 @@ class MainWindow(CTk):
         message_conteiner.bind("<Configure>", on_config)
         self.update_idletasks()
 
-    def save_new_name(self):
+    def register(self):
         new_name = self.name_entry.get().strip()
-        if new_name and new_name != self.username:
-            self.username = new_name
-            self.show_new_message(f"Ви успішно змінили ім'я на {self.username}")
+        new_host = self.host_entry.get().strip()
+        new_port = self.port_entry.get().strip()
+
+        if not new_name or not new_host or not new_port:
+            self.show_new_message("Для реєстрації в додатку - заповніть всі три поля!")
+            return
+        
+        self.username = new_name
+        self.host = new_host
+        self.port = int(new_port)
+
+        try:
+            self.sock = socket(AF_INET, SOCK_STREAM)
+            self.sock.connect((self.host, self.port))
+            hello = f"TEXT@{self.username}@[SYSTEM] {self.username} приєднався(лась) до чату!\n"
+            self.sock.send(hello.encode("utf-8"))
+            threading.Thread(target=self.recv_message, daemon=True).start()
+        except Exception as e:
+            self.show_new_message(f"Не вдалося підключитися до сервера: {e}")
+
 
     def recv_message(self):
         buffer = ""
